@@ -18,6 +18,9 @@ public class Triangle {
     int getColor() {
         return color;
     }
+    int getNewColor() {
+        return newColor;
+    }
     float getAnimation() {
         return animation;
     }

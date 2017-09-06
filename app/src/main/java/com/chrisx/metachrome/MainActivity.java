@@ -284,7 +284,8 @@ public class MainActivity extends AppCompatActivity {
                             flipQueue.add(0);
                             pyramid[0][0].setNewColor(COLORS[i], 0);
                             pyramid[0][0].setAnimation(0);
-                            score = (int)((level-1 + flip(COLORS[i])/(ROWS*ROWS-1)) * 100);
+                            flip(COLORS[i]);
+                            score = (level - 1)*100 + calculateScore();
                             drawScore();
                             currentColor = COLORS[i];
                             flipping = true;
@@ -412,7 +413,7 @@ public class MainActivity extends AppCompatActivity {
                     COLORS[i]);
 
             if (currentColor == COLORS[i]) {
-                Shader shader = new RadialGradient(x, y, r, Color.argb(0,255,255,255), Color.argb(200,255,255,255), Shader.TileMode.CLAMP);
+                Shader shader = new RadialGradient(x, y, r, Color.argb(0,255,255,255), Color.argb(210,255,255,255), Shader.TileMode.CLAMP);
                 Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
                 p.setShader(shader);
                 triangle(x+r*(float)(Math.cos(angle)), y-r*(float)(Math.sin(angle)),
@@ -422,9 +423,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private int flip(int color) {
-        int nFlipped = 0;
-
+    private void flip(int color) {
         while (!flipQueue.isEmpty()) {
             int top = flipQueue.remove();
             int r = top / 100, c = top % 100;
@@ -434,21 +433,18 @@ public class MainActivity extends AppCompatActivity {
                         && pyramid[r+1][c+1].getAnimation() >= 1) {
                     pyramid[r+1][c+1].setAnimation(pyramid[r][c].getAnimation()-1);
                     pyramid[r+1][c+1].setNewColor(color, 2);
-                    nFlipped++;
                     flipQueue.add((r+1)*100 + c+1);
                 }
                 if (c > 0 && pyramid[r][c-1].getColor() == pyramid[r][c].getColor()
                         && pyramid[r][c-1].getAnimation() >= 1) {
                     pyramid[r][c-1].setAnimation(pyramid[r][c].getAnimation()-1);
                     pyramid[r][c-1].setNewColor(color, 1);
-                    nFlipped++;
                     flipQueue.add(r*100 + c-1);
                 }
                 if (c < 2*r && pyramid[r][c+1].getColor() == pyramid[r][c].getColor()
                         && pyramid[r][c+1].getAnimation() >= 1) {
                     pyramid[r][c+1].setAnimation(pyramid[r][c].getAnimation()-1);
                     pyramid[r][c+1].setNewColor(color, 0);
-                    nFlipped++;
                     flipQueue.add(r*100 + c+1);
                 }
             } else {
@@ -456,26 +452,68 @@ public class MainActivity extends AppCompatActivity {
                         && pyramid[r-1][c-1].getAnimation() >= 1) {
                     pyramid[r-1][c-1].setAnimation(pyramid[r][c].getAnimation()-1);
                     pyramid[r-1][c-1].setNewColor(color, 2);
-                    nFlipped++;
                     flipQueue.add((r-1)*100 + c-1);
                 }
                 if (pyramid[r][c-1].getColor() == pyramid[r][c].getColor()
                         && pyramid[r][c-1].getAnimation() >= 1) {
                     pyramid[r][c-1].setAnimation(pyramid[r][c].getAnimation()-1);
                     pyramid[r][c-1].setNewColor(color, 0);
-                    nFlipped++;
                     flipQueue.add(r*100 + c-1);
                 }
                 if (pyramid[r][c+1].getColor() == pyramid[r][c].getColor()
                         && pyramid[r][c+1].getAnimation() >= 1) {
                     pyramid[r][c+1].setAnimation(pyramid[r][c].getAnimation()-1);
                     pyramid[r][c+1].setNewColor(color, 1);
-                    nFlipped++;
+                    flipQueue.add(r*100 + c+1);
+                }
+            }
+        }
+    }
+
+    private int calculateScore() {
+        boolean[][] visited = new boolean[ROWS][2*ROWS-1];
+
+        flipQueue.add(0);
+        visited[0][0] = true;
+
+        while (!flipQueue.isEmpty()) {
+            int top = flipQueue.remove();
+            int r = top / 100, c = top % 100;
+
+            if (c % 2 == 0) {
+                if (r < ROWS-1 && pyramid[r+1][c+1].getNewColor() == pyramid[r][c].getNewColor() && !visited[r+1][c+1]) {
+                    visited[r+1][c+1] = true;
+                    flipQueue.add((r+1)*100 + c+1);
+                }
+                if (c > 0 && pyramid[r][c-1].getNewColor() == pyramid[r][c].getNewColor() && !visited[r][c-1]) {
+                    visited[r][c-1] = true;
+                    flipQueue.add(r*100 + c-1);
+                }
+                if (c < 2*r && pyramid[r][c+1].getNewColor() == pyramid[r][c].getNewColor() && !visited[r][c+1]) {
+                    visited[r][c+1] = true;
+                    flipQueue.add(r*100 + c+1);
+                }
+            } else {
+                if (pyramid[r-1][c-1].getNewColor() == pyramid[r][c].getNewColor() && !visited[r-1][c-1]) {
+                    visited[r-1][c-1] = true;
+                    flipQueue.add((r-1)*100 + c-1);
+                }
+                if (pyramid[r][c-1].getNewColor() == pyramid[r][c].getNewColor() && !visited[r][c-1]) {
+                    visited[r][c-1] = true;
+                    flipQueue.add(r*100 + c-1);
+                }
+                if (pyramid[r][c+1].getNewColor() == pyramid[r][c].getNewColor() && !visited[r][c+1]) {
+                    visited[r][c+1] = true;
                     flipQueue.add(r*100 + c+1);
                 }
             }
         }
 
-        return nFlipped;
+        int nFlipped = 0;
+        for (int r = 0; r < ROWS; r++)
+            for (int c = 0; c < 2*r+1; c++)
+                if (visited[r][c]) nFlipped++;
+
+        return 100*nFlipped/ROWS/ROWS;
     }
 }
