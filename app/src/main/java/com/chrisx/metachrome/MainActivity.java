@@ -154,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
 
                                         //reflection
                                         for (int c = 0; c < ROWS * 2 - 1; c++) {
-                                            pyramid[ROWS - 1][c].draw(canvas, (float)(w()/2+(ROWS-1-c)*width/Math.sqrt(3)),
+                                            pyramid[ROWS - 1][c].drawBase(canvas, (float)(w()/2+(ROWS-1-c)*width/Math.sqrt(3)),
                                                     MARGIN + width/2 + ROWS*width, width / 2, c % 2);
                                         }
                                         Paint p = new Paint();

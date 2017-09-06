@@ -112,10 +112,11 @@ public class Triangle {
         }
     }
 
-    void drawBlack(Canvas c, float x, float y, float r, int dir) {
-        int temp = color;
-        color = Color.BLACK;
+    void drawBase(Canvas c, float x, float y, float r, int dir) {
+        float temp = animation;
+        animation = 1;
         draw(c, x, y, r, dir);
-        color = temp;
+        animation = temp;
+        draw(c, x, y, r, dir);
     }
 }
