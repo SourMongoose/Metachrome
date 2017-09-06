@@ -28,6 +28,9 @@ import android.widget.LinearLayout;
 
 import com.chrisx.metachrome.R;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
+
 public class MainActivity extends AppCompatActivity {
     private Bitmap bmp;
     private Canvas canvas;
@@ -43,12 +46,24 @@ public class MainActivity extends AppCompatActivity {
 
     private String menu = "start";
 
-    private int level, score, turns, shuffles;
+    private int level, score, turns, shuffles, currentColor;
     private float width, turnHeight, paletteY, paletteR;
     private boolean shufflePressed;
+
     private Triangle[][] pyramid;
+    private Queue<Integer> flipQueue = new ArrayDeque<>();
+    private boolean flipped = false, flipping = false;
+
     private static final int ROWS = 8;
     private static final int MARGIN = 30;
+
+    private static final int[] COLORS = {
+            Color.rgb(243,52,85),           //red
+            Color.rgb(145,20,250),          //purple
+            //Color.rgb(255,140,0),         //orange
+            Color.rgb(75,200,30),           //green
+            Color.rgb(50,230,250),          //blue
+            Color.rgb(240,220,20)};         //yellow
 
     //frame data
     private static final int FRAMES_PER_SECOND = 60;
@@ -99,6 +114,11 @@ public class MainActivity extends AppCompatActivity {
         origram = Typeface.createFromAsset(getAssets(), "fonts/Origram.otf");
         pillpopper = Typeface.createFromAsset(getAssets(), "fonts/PillPopper.ttf");
 
+        canvas.drawColor(Color.BLACK);
+
+        //title screen
+        drawTitleMenu();
+
         final Handler handler = new Handler();
         new Thread(new Runnable() {
             @Override
@@ -110,39 +130,39 @@ public class MainActivity extends AppCompatActivity {
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
-                            //background
-                            canvas.drawColor(Color.BLACK);
-
                             if (menu.equals("start")) {
-                                Paint title = newPaint(Color.WHITE);
-                                title.setTextAlign(Paint.Align.CENTER);
-                                title.setTextSize(convert854(120));
-                                canvas.drawText("Meta", w()/2, h()/3, title);
-                                canvas.drawText("Chrome", w()/2, h()/3+convert854(100), title);
-
-                                Paint start = newPaint(Color.rgb(170,170,170));
-                                start.setTextAlign(Paint.Align.CENTER);
-                                start.setTextSize(convert854(70));
-                                canvas.drawText("tap to", w()/2, h()*2/3, start);
-                                canvas.drawText("start", w()/2, h()*2/3+convert854(60), start);
                             } else if (menu.equals("game")) {
                                 if (!paused) {
-                                    for (int r = 0; r < ROWS; r++) {
-                                        for (int c = 0; c < r*2+1; c++) {
-                                            eqTri((float)(w()/2+(r-c)*width/Math.sqrt(3)), MARGIN+width/2+r*width,
-                                                    width/2, 1-c%2, pyramid[r][c].getColor());
+                                    //background
+                                    canvas.drawRect(-1, turnHeight-convert854(35), w()+1, h()+1, newPaint(Color.BLACK));
+                                    //canvas.drawColor(Color.BLACK);
+
+                                    if (flipping) {
+                                        //pyramid
+                                        flipping = false;
+                                        for (int r = 0; r < ROWS; r++) {
+                                            for (int c = 0; c < r * 2 + 1; c++) {
+                                                pyramid[r][c].update();
+                                                if (pyramid[r][c].getAnimation() < 1)
+                                                    flipping = true;
+                                                if (pyramid[r][c].getAnimation() > 0 && pyramid[r][c].getAnimation() < 1)
+                                                    pyramid[r][c].draw(canvas, (float)(w()/2 + (r-c) * width/Math.sqrt(3)),
+                                                            MARGIN + width/2 + r*width, width / 2, 1 - c % 2);
+                                            }
                                         }
+
+                                        //reflection
+                                        for (int c = 0; c < ROWS * 2 - 1; c++) {
+                                            pyramid[ROWS - 1][c].draw(canvas, (float)(w()/2+(ROWS-1-c)*width/Math.sqrt(3)),
+                                                    MARGIN + width/2 + ROWS*width, width / 2, c % 2);
+                                        }
+                                        Paint p = new Paint();
+                                        p.setShader(new LinearGradient(0, MARGIN + width * ROWS, 0, MARGIN + width * (ROWS + 1),
+                                                Color.argb(100, 0, 0, 0), Color.BLACK, Shader.TileMode.CLAMP));
+                                        canvas.drawRect(0, MARGIN + width * ROWS, w(), MARGIN + width * (ROWS + 1) + 2, p);
                                     }
 
-                                    for (int c = 0; c < ROWS*2-1; c++) {
-                                        eqTri((float)(w()/2+(ROWS-1-c)*width/Math.sqrt(3)), MARGIN+width/2+ROWS*width,
-                                                width/2, c%2, pyramid[ROWS-1][c].getColor());
-                                    }
-                                    Paint p = new Paint();
-                                    p.setShader(new LinearGradient(0, MARGIN+width*ROWS, 0, MARGIN+width*(ROWS+1),
-                                            Color.argb(100,0,0,0), Color.BLACK, Shader.TileMode.CLAMP));
-                                    canvas.drawRect(0, MARGIN+width*ROWS, w(), MARGIN+width*(ROWS+1)+2, p);
-
+                                    //level and score
                                     Paint levelText = newPaint(Color.WHITE);
                                     levelText.setTextSize(convert854(50));
                                     canvas.drawText("level", MARGIN, MARGIN+convert854(40), levelText);
@@ -154,17 +174,17 @@ public class MainActivity extends AppCompatActivity {
                                     scoreText.setTextSize(convert854(35));
                                     canvas.drawText(score+"", w()-MARGIN, MARGIN+convert854(90), scoreText);
 
+                                    //shuffle button
                                     Paint shuffleButton = new Paint(Paint.ANTI_ALIAS_FLAG);
-                                    if (shuffles > 0) {
-                                        if (shufflePressed) {
+                                    if (shuffles > 0 && !flipped) {
+                                        if (shufflePressed)
                                             shuffleButton.setShader(new LinearGradient(0, turnHeight - convert854(40),
                                                     0, turnHeight + convert854(15), Color.rgb(255, 140, 0),
                                                     Color.rgb(255, 200, 150), Shader.TileMode.CLAMP));
-                                        } else {
+                                        else
                                             shuffleButton.setShader(new LinearGradient(0, turnHeight - convert854(40),
                                                     0, turnHeight + convert854(15), Color.rgb(255, 200, 150),
                                                     Color.rgb(255, 140, 0), Shader.TileMode.CLAMP));
-                                        }
                                     } else {
                                         shuffleButton.setShader(new LinearGradient(0, turnHeight - convert854(40),
                                                 0, turnHeight + convert854(15), Color.rgb(200, 200, 200),
@@ -224,6 +244,9 @@ public class MainActivity extends AppCompatActivity {
 
         if (menu.equals("start")) {
             if (action == MotionEvent.ACTION_DOWN) {
+                canvas.drawColor(Color.BLACK);
+                drawLevel();
+                drawScore();
                 menu = "game";
                 level = 1;
                 score = 0;
@@ -238,7 +261,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             //shuffle
-            if (shuffles > 0 && X > w()/2+convert854(MARGIN) && X < w()-convert854(MARGIN)
+            if (shuffles > 0 && !flipped && X > w()/2+convert854(MARGIN) && X < w()-convert854(MARGIN)
                     && Y > MARGIN*2+width*(ROWS+1)-convert854(5) && Y < MARGIN*2+width*(ROWS+1)+convert854(50)) {
                 if (action == MotionEvent.ACTION_DOWN) {
                     shufflePressed = true;
@@ -246,14 +269,41 @@ public class MainActivity extends AppCompatActivity {
                     if (downX > w()/2+convert854(MARGIN) && downX < w()-convert854(MARGIN)
                             && downY > MARGIN*2+width*(ROWS+1)-convert854(5) && downY < MARGIN*2+width*(ROWS+1)+convert854(50)) {
                         shufflePressed = false;
-                        for (int r = 0; r < ROWS; r++)
-                            for (int c = 0; c < r * 2 + 1; c++)
-                                pyramid[r][c].setRandomColor();
+
+                        //randomize pyramid colors
+                        randomizeColors();
+
                         shuffles--;
                     }
                 }
             } else {
                 shufflePressed = false;
+            }
+
+            //palette
+            if (!flipping && Math.pow(X-w()/2, 2) + Math.pow(Y-paletteY, 2) < Math.pow(paletteR, 2)) {
+                if (action == MotionEvent.ACTION_DOWN) {
+                    double angle = (Math.atan2(paletteY-Y, X-w()/2) + 2*Math.PI) % (2*Math.PI);
+                    for (int i = 0; i < COLORS.length; i++) {
+                        if (currentColor == COLORS[i]) continue;
+
+                        double mnAngle = toRad(54) + toRad(72)*i;
+                        double mxAngle = toRad(126) + toRad(72)*i;
+                        double mnAngle2 = mnAngle - 2*Math.PI;
+                        double mxAngle2 = mxAngle - 2*Math.PI;
+                        if (angle > mnAngle && angle < mxAngle || angle > mnAngle2 && angle < mxAngle2) {
+                            flipQueue.add(0);
+                            pyramid[0][0].setNewColor(COLORS[i], 0);
+                            pyramid[0][0].setAnimation(0);
+                            flip(COLORS[i]);
+                            currentColor = COLORS[i];
+                            flipping = true;
+                            flipped = true;
+                            turns--;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -304,27 +354,109 @@ public class MainActivity extends AppCompatActivity {
         for (int r = 0; r < ROWS; r++)
             for (int c = 0; c < r*2+1; c++)
                 pyramid[r][c].setRandomColor();
+        currentColor = pyramid[0][0].getColor();
+        drawPyramid();
     }
 
     private double toRad(double deg) {
         return Math.PI/180*deg;
     }
 
+    private void drawTitleMenu() {
+        Paint title = newPaint(Color.WHITE);
+        title.setTextAlign(Paint.Align.CENTER);
+        title.setTextSize(convert854(120));
+        canvas.drawText("Meta", w()/2, h()/3, title);
+        canvas.drawText("Chrome", w()/2, h()/3+convert854(100), title);
+
+        Paint start = newPaint(Color.rgb(170,170,170));
+        start.setTextAlign(Paint.Align.CENTER);
+        start.setTextSize(convert854(70));
+        canvas.drawText("tap to", w()/2, h()*2/3, start);
+        canvas.drawText("start", w()/2, h()*2/3+convert854(60), start);
+    }
+
+    private void drawLevel() {
+
+    }
+
+    private void drawScore() {
+
+    }
+
+    private void drawPyramid() {
+        for (int r = 0; r < ROWS; r++)
+            for (int c = 0; c < r * 2 + 1; c++)
+                pyramid[r][c].draw(canvas, (float) (w() / 2 + (r - c) * width / Math.sqrt(3)),
+                        MARGIN + width / 2 + r * width, width / 2, 1 - c % 2);
+    }
+
     private void drawPalette(float x, float y, float r) {
-        int[] colors = {Color.rgb(243,52,85),   //red
-                Color.rgb(145,20,250),          //purple
-                //Color.rgb(255,140,0),         //orange
-                Color.rgb(75,200,30),           //green
-                Color.rgb(50,230,250),          //blue
-                Color.rgb(240,220,20)};         //yellow
-        for (int i = 0; i < colors.length; i++) {
+        for (int i = 0; i < COLORS.length; i++) {
             double angle = toRad(64) + toRad(72)*i;
             float tmp = 2*r*r - 2*r*r*(float)Math.cos(toRad(52));
             float dst = (float)(Math.sqrt(r*r + tmp - 2*r*Math.sqrt(tmp)*Math.cos(toRad(4))));
             triangle(x+r*(float)(Math.cos(angle)), y-r*(float)(Math.sin(angle)),
                     x+r*(float)(Math.cos(angle+toRad(52))), y-r*(float)(Math.sin(angle+toRad(52))),
                     x+dst*(float)(Math.cos(angle+toRad(26))), y-dst*(float)(Math.sin(angle+toRad(26))),
-                    colors[i]);
+                    COLORS[i]);
         }
+    }
+
+    private int flip(int color) {
+        int nFlipped = 0;
+
+        while (!flipQueue.isEmpty()) {
+            int top = flipQueue.remove();
+            int r = top / 100, c = top % 100;
+
+            if (c % 2 == 0) {
+                if (r < ROWS-1 && pyramid[r+1][c+1].getColor() == pyramid[r][c].getColor()
+                        && pyramid[r+1][c+1].getAnimation() >= 1) {
+                    pyramid[r+1][c+1].setAnimation(pyramid[r][c].getAnimation()-1);
+                    pyramid[r+1][c+1].setNewColor(color, 2);
+                    nFlipped++;
+                    flipQueue.add((r+1)*100 + c+1);
+                }
+                if (c > 0 && pyramid[r][c-1].getColor() == pyramid[r][c].getColor()
+                        && pyramid[r][c-1].getAnimation() >= 1) {
+                    pyramid[r][c-1].setAnimation(pyramid[r][c].getAnimation()-1);
+                    pyramid[r][c-1].setNewColor(color, 1);
+                    nFlipped++;
+                    flipQueue.add(r*100 + c-1);
+                }
+                if (c < 2*r && pyramid[r][c+1].getColor() == pyramid[r][c].getColor()
+                        && pyramid[r][c+1].getAnimation() >= 1) {
+                    pyramid[r][c+1].setAnimation(pyramid[r][c].getAnimation()-1);
+                    pyramid[r][c+1].setNewColor(color, 0);
+                    nFlipped++;
+                    flipQueue.add(r*100 + c+1);
+                }
+            } else {
+                if (pyramid[r-1][c-1].getColor() == pyramid[r][c].getColor()
+                        && pyramid[r-1][c-1].getAnimation() >= 1) {
+                    pyramid[r-1][c-1].setAnimation(pyramid[r][c].getAnimation()-1);
+                    pyramid[r-1][c-1].setNewColor(color, 2);
+                    nFlipped++;
+                    flipQueue.add((r-1)*100 + c-1);
+                }
+                if (pyramid[r][c-1].getColor() == pyramid[r][c].getColor()
+                        && pyramid[r][c-1].getAnimation() >= 1) {
+                    pyramid[r][c-1].setAnimation(pyramid[r][c].getAnimation()-1);
+                    pyramid[r][c-1].setNewColor(color, 0);
+                    nFlipped++;
+                    flipQueue.add(r*100 + c-1);
+                }
+                if (pyramid[r][c+1].getColor() == pyramid[r][c].getColor()
+                        && pyramid[r][c+1].getAnimation() >= 1) {
+                    pyramid[r][c+1].setAnimation(pyramid[r][c].getAnimation()-1);
+                    pyramid[r][c+1].setNewColor(color, 1);
+                    nFlipped++;
+                    flipQueue.add(r*100 + c+1);
+                }
+            }
+        }
+
+        return nFlipped;
     }
 }
