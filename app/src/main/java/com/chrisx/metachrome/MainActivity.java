@@ -14,6 +14,7 @@ import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
@@ -162,18 +163,6 @@ public class MainActivity extends AppCompatActivity {
                                         canvas.drawRect(0, MARGIN + width * ROWS, w(), MARGIN + width * (ROWS + 1) + 2, p);
                                     }
 
-                                    //level and score
-                                    Paint levelText = newPaint(Color.WHITE);
-                                    levelText.setTextSize(convert854(50));
-                                    canvas.drawText("level", MARGIN, MARGIN+convert854(40), levelText);
-                                    Paint scoreText = new Paint(levelText);
-                                    scoreText.setTextAlign(Paint.Align.RIGHT);
-                                    canvas.drawText("score", w()-MARGIN, MARGIN+convert854(40), scoreText);
-                                    levelText.setTextSize(convert854(35));
-                                    canvas.drawText(level+"", MARGIN, MARGIN+convert854(90), levelText);
-                                    scoreText.setTextSize(convert854(35));
-                                    canvas.drawText(score+"", w()-MARGIN, MARGIN+convert854(90), scoreText);
-
                                     //shuffle button
                                     Paint shuffleButton = new Paint(Paint.ANTI_ALIAS_FLAG);
                                     if (shuffles > 0 && !flipped) {
@@ -245,11 +234,11 @@ public class MainActivity extends AppCompatActivity {
         if (menu.equals("start")) {
             if (action == MotionEvent.ACTION_DOWN) {
                 canvas.drawColor(Color.BLACK);
+                level = 1;
+                score = 0;
                 drawLevel();
                 drawScore();
                 menu = "game";
-                level = 1;
-                score = 0;
                 turns = 30;
                 shuffles = 3;
                 randomizeColors();
@@ -295,7 +284,8 @@ public class MainActivity extends AppCompatActivity {
                             flipQueue.add(0);
                             pyramid[0][0].setNewColor(COLORS[i], 0);
                             pyramid[0][0].setAnimation(0);
-                            flip(COLORS[i]);
+                            score = (int)((level-1 + flip(COLORS[i])/(ROWS*ROWS-1)) * 100);
+                            drawScore();
                             currentColor = COLORS[i];
                             flipping = true;
                             flipped = true;
@@ -344,10 +334,17 @@ public class MainActivity extends AppCompatActivity {
 
         canvas.drawPath(path, p);
     }
+    private void triangle(float x1, float y1, float x2, float y2, float x3, float y3, Paint p) {
+        p.setStyle(Paint.Style.FILL);
 
-    private void eqTri(float x, float y, float r, int dir, int color) {
-        if (dir > 0) triangle(x, y-r, (float)(x-r*2/Math.sqrt(3)), y+r, (float)(x+r*2/Math.sqrt(3)), y+r, color);
-        else triangle(x, y+r, (float)(x-r*2/Math.sqrt(3)), y-r, (float)(x+r*2/Math.sqrt(3)), y-r, color);
+        Path path = new Path();
+        path.setFillType(Path.FillType.EVEN_ODD);
+        path.moveTo(x1, y1);
+        path.lineTo(x2, y2);
+        path.lineTo(x3, y3);
+        path.close();
+
+        canvas.drawPath(path, p);
     }
 
     private void randomizeColors() {
@@ -377,11 +374,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void drawLevel() {
+        triangle(w()/2, 0, 0, 0, 0, MARGIN+ROWS*width, Color.BLACK);
 
+        Paint levelText = newPaint(Color.WHITE);
+        levelText.setTextSize(convert854(50));
+        canvas.drawText("level", MARGIN, MARGIN+convert854(40), levelText);
+        levelText.setTextSize(convert854(35));
+        canvas.drawText(level+"", MARGIN, MARGIN+convert854(90), levelText);
     }
 
     private void drawScore() {
+        triangle(w()/2, 0, w(), 0, w(), MARGIN+ROWS*width, Color.BLACK);
 
+        Paint scoreText = newPaint(Color.WHITE);
+        scoreText.setTextSize(convert854(50));
+        scoreText.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText("score", w()-MARGIN, MARGIN+convert854(40), scoreText);
+        scoreText.setTextSize(convert854(35));
+        canvas.drawText(score+"", w()-MARGIN, MARGIN+convert854(90), scoreText);
     }
 
     private void drawPyramid() {
@@ -400,6 +410,15 @@ public class MainActivity extends AppCompatActivity {
                     x+r*(float)(Math.cos(angle+toRad(52))), y-r*(float)(Math.sin(angle+toRad(52))),
                     x+dst*(float)(Math.cos(angle+toRad(26))), y-dst*(float)(Math.sin(angle+toRad(26))),
                     COLORS[i]);
+
+            if (currentColor == COLORS[i]) {
+                Shader shader = new RadialGradient(x, y, r, Color.argb(0,255,255,255), Color.argb(200,255,255,255), Shader.TileMode.CLAMP);
+                Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+                p.setShader(shader);
+                triangle(x+r*(float)(Math.cos(angle)), y-r*(float)(Math.sin(angle)),
+                        x+r*(float)(Math.cos(angle+toRad(52))), y-r*(float)(Math.sin(angle+toRad(52))),
+                        x+dst*(float)(Math.cos(angle+toRad(26))), y-dst*(float)(Math.sin(angle+toRad(26))), p);
+            }
         }
     }
 

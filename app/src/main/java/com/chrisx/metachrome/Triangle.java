@@ -98,7 +98,7 @@ public class Triangle {
         }
 
         //triangle
-        triangle(c, x1, y1, x2, y2, x3, y3, color);
+        if (animation >= 1) triangle(c, x1, y1, x2, y2, x3, y3, color);
 
         //flip effect
         r += r/20;
