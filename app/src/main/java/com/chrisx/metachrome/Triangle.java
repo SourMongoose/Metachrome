@@ -104,7 +104,6 @@ public class Triangle {
         if (animation >= 1) triangle(c, x1, y1, x2, y2, x3, y3, color);
 
         //flip effect
-        r += r/20;
         if (animation < 1 && animation >= 0) {
             if (flipDir == 0) shortTriangle(c, x1, y1, x2, y2, x3, y3);
             else if (flipDir == 1) shortTriangle(c, x1, y1, x3, y3, x2, y2);

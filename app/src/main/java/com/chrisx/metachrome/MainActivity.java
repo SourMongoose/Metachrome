@@ -73,6 +73,8 @@ public class MainActivity extends AppCompatActivity {
 
     private float downX, downY;
 
+    private Paint shuffleButton, shuffle, title;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -99,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
         nanosecondsPerFrame = (long)1e9 / FRAMES_PER_SECOND;
         millisecondsPerFrame = (long)1e3 / FRAMES_PER_SECOND;
 
+        //initialize pyramid
         pyramid = new Triangle[ROWS][ROWS*2-1];
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < r*2+1; c++) {
@@ -111,11 +114,23 @@ public class MainActivity extends AppCompatActivity {
         paletteY = (h() + turnHeight + convert854(15)) / 2;
         paletteR = h() - paletteY - convert854(MARGIN);
 
-        merkur = Typeface.createFromAsset(getAssets(), "fonts/Merkur.otf");
-        origram = Typeface.createFromAsset(getAssets(), "fonts/Origram.otf");
+        //initialize fonts
+        //merkur = Typeface.createFromAsset(getAssets(), "fonts/Merkur.otf");
+        //origram = Typeface.createFromAsset(getAssets(), "fonts/Origram.otf");
         pillpopper = Typeface.createFromAsset(getAssets(), "fonts/PillPopper.ttf");
 
         canvas.drawColor(Color.BLACK);
+
+        //pre-defined paints
+        shuffleButton = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        shuffle = newPaint(Color.WHITE);
+        shuffle.setTextSize(convert854(35));
+        shuffle.setTextAlign(Paint.Align.CENTER);
+
+        title = newPaint(Color.WHITE);
+        title.setTextAlign(Paint.Align.CENTER);
+        title.setTextSize(convert854(120));
 
         //title screen
         drawTitleMenu();
@@ -153,18 +168,15 @@ public class MainActivity extends AppCompatActivity {
                                         }
 
                                         //reflection
-                                        for (int c = 0; c < ROWS * 2 - 1; c++) {
-                                            pyramid[ROWS - 1][c].drawBase(canvas, (float)(w()/2+(ROWS-1-c)*width/Math.sqrt(3)),
-                                                    MARGIN + width/2 + ROWS*width, width / 2, c % 2);
+                                        for (int c = 0; c < ROWS*2-1; c++) {
+                                            if (pyramid[ROWS-1][c].getAnimation() > 0) {
+                                                drawReflection();
+                                                break;
+                                            }
                                         }
-                                        Paint p = new Paint();
-                                        p.setShader(new LinearGradient(0, MARGIN + width * ROWS, 0, MARGIN + width * (ROWS + 1),
-                                                Color.argb(100, 0, 0, 0), Color.BLACK, Shader.TileMode.CLAMP));
-                                        canvas.drawRect(0, MARGIN + width * ROWS, w(), MARGIN + width * (ROWS + 1) + 2, p);
                                     }
 
                                     //shuffle button
-                                    Paint shuffleButton = new Paint(Paint.ANTI_ALIAS_FLAG);
                                     if (shuffles > 0 && !flipped) {
                                         if (shufflePressed)
                                             shuffleButton.setShader(new LinearGradient(0, turnHeight - convert854(40),
@@ -182,14 +194,20 @@ public class MainActivity extends AppCompatActivity {
                                     canvas.drawRoundRect(new RectF(w()/2+convert854(MARGIN), turnHeight-convert854(40),
                                             w()-convert854(MARGIN), turnHeight+convert854(15)), convert854(15),
                                             convert854(15), shuffleButton);
-                                    Paint shuffle = newPaint(Color.WHITE);
-                                    shuffle.setTextSize(convert854(35));
-                                    shuffle.setTextAlign(Paint.Align.CENTER);
                                     canvas.drawText("shuffle", w()*3/4, turnHeight, shuffle);
+
                                     canvas.drawText("turns: "+turns, w()/4, turnHeight, shuffle);
 
                                     //palette
                                     drawPalette(w()/2, paletteY, paletteR);
+
+                                    //check for next level/game over
+                                    if (!flipping && score == level*100) {
+                                        nextLevel();
+                                    } else if (!flipping && turns == 0) {
+                                        menu = "gameover";
+                                        drawGameOver();
+                                    }
                                 }
                             }
 
@@ -231,15 +249,16 @@ public class MainActivity extends AppCompatActivity {
         float Y = event.getY();
         int action = event.getAction();
 
-        if (menu.equals("start")) {
+        if (menu.equals("start") || menu.equals("gameover")) {
             if (action == MotionEvent.ACTION_DOWN) {
+                //complete restart
                 canvas.drawColor(Color.BLACK);
                 level = 1;
                 score = 0;
                 drawLevel();
                 drawScore();
                 menu = "game";
-                turns = 30;
+                turns = 25;
                 shuffles = 3;
                 randomizeColors();
             }
@@ -280,7 +299,7 @@ public class MainActivity extends AppCompatActivity {
                         double mxAngle = toRad(126) + toRad(72)*i;
                         double mnAngle2 = mnAngle - 2*Math.PI;
                         double mxAngle2 = mxAngle - 2*Math.PI;
-                        if (angle > mnAngle && angle < mxAngle || angle > mnAngle2 && angle < mxAngle2) {
+                        if ((angle > mnAngle && angle < mxAngle) || (angle > mnAngle2 && angle < mxAngle2)) {
                             flipQueue.add(0);
                             pyramid[0][0].setNewColor(COLORS[i], 0);
                             pyramid[0][0].setAnimation(0);
@@ -352,8 +371,22 @@ public class MainActivity extends AppCompatActivity {
         for (int r = 0; r < ROWS; r++)
             for (int c = 0; c < r*2+1; c++)
                 pyramid[r][c].setRandomColor();
+
         currentColor = pyramid[0][0].getColor();
+
         drawPyramid();
+        drawReflection();
+    }
+
+    private void nextLevel() {
+        level++;
+        drawLevel();
+
+        shuffles = 3;
+        flipped = false;
+        turns += Math.max(28 - level*3, 10);
+
+        randomizeColors();
     }
 
     private double toRad(double deg) {
@@ -361,9 +394,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void drawTitleMenu() {
-        Paint title = newPaint(Color.WHITE);
-        title.setTextAlign(Paint.Align.CENTER);
-        title.setTextSize(convert854(120));
         canvas.drawText("Meta", w()/2, h()/3, title);
         canvas.drawText("Chrome", w()/2, h()/3+convert854(100), title);
 
@@ -372,6 +402,25 @@ public class MainActivity extends AppCompatActivity {
         start.setTextSize(convert854(70));
         canvas.drawText("tap to", w()/2, h()*2/3, start);
         canvas.drawText("start", w()/2, h()*2/3+convert854(60), start);
+    }
+
+    private void drawGameOver() {
+        canvas.drawColor(Color.BLACK);
+
+        canvas.drawText("Game", w()/2, h()/4, title);
+        canvas.drawText("Over", w()/2, h()/4+convert854(105), title);
+
+        Paint scoreText = newPaint(Color.rgb(180,180,180));
+        scoreText.setTextAlign(Paint.Align.CENTER);
+        scoreText.setTextSize(convert854(65));
+        canvas.drawText("You scored:", w()/2, h()/2, scoreText);
+        canvas.drawText(score+"", w()/2, h()/2+convert854(70), scoreText);
+
+        Paint restart = newPaint(Color.rgb(220,220,220));
+        restart.setTextAlign(Paint.Align.CENTER);
+        restart.setTextSize(convert854(55));
+        canvas.drawText("tap to", w()/2, h()*3/4, restart);
+        canvas.drawText("play again", w()/2, h()*3/4+convert854(50), restart);
     }
 
     private void drawLevel() {
@@ -395,6 +444,7 @@ public class MainActivity extends AppCompatActivity {
         canvas.drawText(score+"", w()-MARGIN, MARGIN+convert854(90), scoreText);
     }
 
+    //draws the pyramid of triangles
     private void drawPyramid() {
         for (int r = 0; r < ROWS; r++)
             for (int c = 0; c < r * 2 + 1; c++)
@@ -402,6 +452,19 @@ public class MainActivity extends AppCompatActivity {
                         MARGIN + width / 2 + r * width, width / 2, 1 - c % 2);
     }
 
+    //draws the pyramid's "reflection" under it
+    private void drawReflection() {
+        for (int c = 0; c < ROWS * 2 - 1; c++) {
+            pyramid[ROWS - 1][c].drawBase(canvas, (float)(w()/2+(ROWS-1-c)*width/Math.sqrt(3)),
+                    MARGIN + width/2 + ROWS*width, width / 2, c % 2);
+        }
+        Paint p = new Paint();
+        p.setShader(new LinearGradient(0, MARGIN + width*ROWS, 0, MARGIN + width*(ROWS+1),
+                Color.argb(130,0,0,0), Color.BLACK, Shader.TileMode.CLAMP));
+        canvas.drawRect(0, MARGIN + width * ROWS, w(), MARGIN + width * (ROWS + 1) + 2, p);
+    }
+
+    //draws the pentagon of colors at the bottom
     private void drawPalette(float x, float y, float r) {
         for (int i = 0; i < COLORS.length; i++) {
             double angle = toRad(64) + toRad(72)*i;
@@ -412,8 +475,10 @@ public class MainActivity extends AppCompatActivity {
                     x+dst*(float)(Math.cos(angle+toRad(26))), y-dst*(float)(Math.sin(angle+toRad(26))),
                     COLORS[i]);
 
+            //highlights the current color in a white gradient
             if (currentColor == COLORS[i]) {
-                Shader shader = new RadialGradient(x, y, r, Color.argb(0,255,255,255), Color.argb(210,255,255,255), Shader.TileMode.CLAMP);
+                Shader shader = new RadialGradient(x, y, r, Color.argb(0,255,255,255),
+                        Color.argb(210,255,255,255), Shader.TileMode.CLAMP);
                 Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
                 p.setShader(shader);
                 triangle(x+r*(float)(Math.cos(angle)), y-r*(float)(Math.sin(angle)),
@@ -424,6 +489,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void flip(int color) {
+        //BFS through the pyramid
         while (!flipQueue.isEmpty()) {
             int top = flipQueue.remove();
             int r = top / 100, c = top % 100;
@@ -476,6 +542,7 @@ public class MainActivity extends AppCompatActivity {
         flipQueue.add(0);
         visited[0][0] = true;
 
+        //BFS through the pyramid
         while (!flipQueue.isEmpty()) {
             int top = flipQueue.remove();
             int r = top / 100, c = top % 100;
@@ -514,6 +581,7 @@ public class MainActivity extends AppCompatActivity {
             for (int c = 0; c < 2*r+1; c++)
                 if (visited[r][c]) nFlipped++;
 
+        //return the % of triangles connected with the top one
         return 100*nFlipped/ROWS/ROWS;
     }
 }
