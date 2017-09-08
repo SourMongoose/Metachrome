@@ -27,10 +27,11 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 
-import com.chrisx.metachrome.R;
-
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private Bitmap bmp;
@@ -53,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Triangle[][] pyramid;
     private Queue<Integer> flipQueue = new ArrayDeque<>();
+    private List<Integer> triangles = new ArrayList<>();
     private boolean flipped = false, flipping = false;
 
     private static final int ROWS = 8;
@@ -70,6 +72,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int FRAMES_PER_SECOND = 60;
     private long nanosecondsPerFrame;
     private long millisecondsPerFrame;
+
+    private int gameoverFrames;
 
     private float downX, downY;
 
@@ -106,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < r*2+1; c++) {
                 pyramid[r][c] = new Triangle();
+                triangles.add(r*100 + c);
             }
         }
 
@@ -206,8 +211,37 @@ public class MainActivity extends AppCompatActivity {
                                         nextLevel();
                                     } else if (!flipping && turns == 0) {
                                         menu = "gameover";
-                                        drawGameOver();
+                                        gameoverFrames = 0;
+                                        Collections.shuffle(triangles);
                                     }
+                                }
+                            } else if (menu.equals("gameover")) {
+                                if (gameoverFrames < 188) {
+                                    if (gameoverFrames < 128) {
+                                        if (gameoverFrames % 2 == 1) {
+                                            int curr = triangles.get(gameoverFrames/2);
+                                            int r = curr / 100, c = curr % 100;
+
+                                            Triangle temp = new Triangle();
+                                            temp.setColor(Color.BLACK);
+                                            temp.draw(canvas, (float)(w() / 2 + (r - c) * width / Math.sqrt(3)),
+                                                    MARGIN + width / 2 + r * width, width / 2 + 1, 1 - c % 2);
+
+                                            if (r == ROWS-1) {
+                                                temp.draw(canvas, (float)(w() / 2 + (r - c) * width / Math.sqrt(3)),
+                                                        MARGIN + width / 2 + ROWS*width, width / 2 + 1, c % 2);
+                                            }
+                                        }
+                                    } else {
+                                        canvas.drawColor(Color.argb(5,0,0,0));
+                                    }
+
+                                    gameoverFrames++;
+                                } else if (gameoverFrames <= 248){
+                                    drawGameOver();
+                                    canvas.drawColor(Color.argb((int)((248-gameoverFrames)/60f*255),0,0,0));
+
+                                    gameoverFrames++;
                                 }
                             }
 
@@ -249,7 +283,7 @@ public class MainActivity extends AppCompatActivity {
         float Y = event.getY();
         int action = event.getAction();
 
-        if (menu.equals("start") || menu.equals("gameover")) {
+        if (menu.equals("start") || (menu.equals("gameover") && gameoverFrames > 240)) {
             if (action == MotionEvent.ACTION_DOWN) {
                 //complete restart
                 canvas.drawColor(Color.BLACK);
@@ -260,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
                 menu = "game";
                 turns = 25;
                 shuffles = 3;
+                flipped = false;
                 randomizeColors();
             }
         } else if (menu.equals("game")) {
