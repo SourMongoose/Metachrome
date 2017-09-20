@@ -52,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private float width, turnHeight, paletteY, paletteR;
     private boolean shufflePressed;
 
+    private boolean helpDrawn;
+
     private Triangle[][] pyramid;
     private Queue<Integer> flipQueue = new ArrayDeque<>();
     private List<Integer> triangles = new ArrayList<>();
@@ -151,7 +153,11 @@ public class MainActivity extends AppCompatActivity {
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
-                            if (menu.equals("start")) {
+                            if (menu.equals("help")) {
+                                if (!helpDrawn) {
+                                    drawHelp();
+                                    helpDrawn = true;
+                                }
                             } else if (menu.equals("game")) {
                                 if (!paused) {
                                     //background
@@ -206,12 +212,22 @@ public class MainActivity extends AppCompatActivity {
                                     //palette
                                     drawPalette(w()/2, paletteY, paletteR);
 
+                                    //help button
+                                    drawHelpButton(w()-convert854(40),h()-convert854(40),30, true);
+
                                     //check for next level/game over
                                     if (!flipping && score == level*100) {
                                         nextLevel();
                                     } else if (!flipping && turns == 0) {
                                         menu = "gameover";
                                         gameoverFrames = 0;
+
+                                        //update high score
+                                        if (score > getHighScore()) {
+                                            editor.putInt("high_score", score);
+                                            editor.apply();
+                                        }
+
                                         Collections.shuffle(triangles);
                                     }
                                 }
@@ -350,6 +366,25 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
+
+            //help
+            if (!flipping && X > w()-convert854(80) && Y > h()-convert854(80)) {
+                if (action == MotionEvent.ACTION_UP) {
+                    menu = "help";
+                    helpDrawn = false;
+                }
+            }
+        } else if (menu.equals("help")) {
+            if (X > w()-convert854(80) && Y > h()-convert854(80)) {
+                if (action == MotionEvent.ACTION_UP) {
+                    menu = "game";
+                    canvas.drawColor(Color.BLACK);
+                    drawPyramid();
+                    drawReflection();
+                    drawScore();
+                    drawLevel();
+                }
+            }
         }
 
         return true;
@@ -374,6 +409,10 @@ public class MainActivity extends AppCompatActivity {
 
     private float convert854(float f) {
         return h() / (854 / f);
+    }
+
+    private long getHighScore() {
+        return sharedPref.getInt("high_score", 0);
     }
 
     private void triangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) {
@@ -445,11 +484,14 @@ public class MainActivity extends AppCompatActivity {
         canvas.drawText("Game", w()/2, h()/4, title);
         canvas.drawText("Over", w()/2, h()/4+convert854(105), title);
 
-        Paint scoreText = newPaint(Color.rgb(180,180,180));
+        Paint scoreText = newPaint(Color.rgb(190,190,190));
         scoreText.setTextAlign(Paint.Align.CENTER);
         scoreText.setTextSize(convert854(65));
         canvas.drawText("You scored:", w()/2, h()/2, scoreText);
         canvas.drawText(score+"", w()/2, h()/2+convert854(70), scoreText);
+        scoreText.setColor(Color.rgb(180,180,180));
+        scoreText.setTextSize(convert854(30));
+        canvas.drawText("high score: " + getHighScore(), w()/2, h()/2+convert854(110), scoreText);
 
         Paint restart = newPaint(Color.rgb(220,220,220));
         restart.setTextAlign(Paint.Align.CENTER);
@@ -521,6 +563,47 @@ public class MainActivity extends AppCompatActivity {
                         x+dst*(float)(Math.cos(angle+toRad(26))), y-dst*(float)(Math.sin(angle+toRad(26))), p);
             }
         }
+    }
+
+    //draws help button
+    private void drawHelpButton(float x, float y, float r, boolean help) {
+        canvas.drawCircle(x, y, r, newPaint(Color.WHITE));
+
+        Paint p = newPaint(Color.BLACK);
+        p.setTextSize(r*1.5f);
+        p.setTextAlign(Paint.Align.CENTER);
+
+        if (help) canvas.drawText("    ?   l", x, y+r*.7f, p);
+        else canvas.drawText("x", x, y+r*.4f, p);
+    }
+
+    //draws "how to play" screen
+    private void drawHelp() {
+        canvas.drawColor(Color.BLACK);
+
+        Paint p = new Paint(title);
+        p.setTextSize(convert854(70));
+        canvas.drawText("how to play", w()/2, convert854(100), p);
+
+        String[] instructions = {
+                "Make all the triangles",
+                "in the pyramid match",
+                "to complete a level.",
+                "",
+                "Starting from the top",
+                "triangle, change into",
+                "adjacent colors to",
+                "take over the board.",
+                "",
+                "If you run out of",
+                "turns, it's game over."
+        };
+        p.setTextSize(convert854(40));
+        for (int i = 0; i < instructions.length; i++) {
+            canvas.drawText(instructions[i], w()/2, convert854(200)+convert854(50)*i, p);
+        }
+
+        drawHelpButton(w()-convert854(40),h()-convert854(40),30, false);
     }
 
     private void flip(int color) {
