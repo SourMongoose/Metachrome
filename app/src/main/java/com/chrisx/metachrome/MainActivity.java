@@ -117,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         width = (float)((w() - 2*convert854(MARGIN)) / ROWS * Math.sqrt(3) / 2);
-        turnHeight = MARGIN*2 + width*(ROWS+1) + convert854(35);
+        turnHeight = convert854(MARGIN)*2 + width*(ROWS+1) + convert854(35);
         paletteY = (h() + turnHeight + convert854(15)) / 2;
         paletteR = h() - paletteY - convert854(MARGIN);
 
@@ -174,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
                                                     flipping = true;
                                                 if (pyramid[r][c].getAnimation() > 0 && pyramid[r][c].getAnimation() < 1)
                                                     pyramid[r][c].draw(canvas, (float)(w()/2 + (r-c) * width/Math.sqrt(3)),
-                                                            MARGIN + width/2 + r*width, width / 2, 1 - c % 2);
+                                                            convert854(MARGIN) + width/2 + r*width, width / 2, 1 - c % 2);
                                             }
                                         }
 
@@ -213,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
                                     drawPalette(w()/2, paletteY, paletteR);
 
                                     //help button
-                                    drawHelpButton(w()-convert854(40),h()-convert854(40),30, true);
+                                    drawHelpButton(w()-convert854(40),h()-convert854(40),convert854(30), true);
 
                                     //check for next level/game over
                                     if (!flipping && score == level*100) {
@@ -241,11 +241,11 @@ public class MainActivity extends AppCompatActivity {
                                             Triangle temp = new Triangle();
                                             temp.setColor(Color.BLACK);
                                             temp.draw(canvas, (float)(w() / 2 + (r - c) * width / Math.sqrt(3)),
-                                                    MARGIN + width / 2 + r * width, width / 2 + 1, 1 - c % 2);
+                                                    convert854(MARGIN) + width / 2 + r * width, width / 2 + 1, 1 - c % 2);
 
                                             if (r == ROWS-1) {
                                                 temp.draw(canvas, (float)(w() / 2 + (r - c) * width / Math.sqrt(3)),
-                                                        MARGIN + width / 2 + ROWS*width, width / 2 + 1, c % 2);
+                                                        convert854(MARGIN) + width / 2 + ROWS*width, width / 2 + 1, c % 2);
                                             }
                                         }
                                     } else {
@@ -321,12 +321,14 @@ public class MainActivity extends AppCompatActivity {
 
             //shuffle
             if (shuffles > 0 && !flipped && X > w()/2+convert854(MARGIN) && X < w()-convert854(MARGIN)
-                    && Y > MARGIN*2+width*(ROWS+1)-convert854(5) && Y < MARGIN*2+width*(ROWS+1)+convert854(50)) {
+                    && Y > convert854(MARGIN)*2+width*(ROWS+1)-convert854(5)
+                    && Y < convert854(MARGIN)*2+width*(ROWS+1)+convert854(50)) {
                 if (action == MotionEvent.ACTION_DOWN) {
                     shufflePressed = true;
                 } else if (action == MotionEvent.ACTION_UP) {
                     if (downX > w()/2+convert854(MARGIN) && downX < w()-convert854(MARGIN)
-                            && downY > MARGIN*2+width*(ROWS+1)-convert854(5) && downY < MARGIN*2+width*(ROWS+1)+convert854(50)) {
+                            && downY > convert854(MARGIN)*2+width*(ROWS+1)-convert854(5)
+                            && downY < convert854(MARGIN)*2+width*(ROWS+1)+convert854(50)) {
                         shufflePressed = false;
 
                         //randomize pyramid colors
@@ -501,13 +503,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void drawLevel() {
-        triangle(w()/2, 0, 0, 0, 0, MARGIN+ROWS*width, Color.BLACK);
+        triangle(w()/2, 0, 0, 0, 0, convert854(MARGIN)+ROWS*width, Color.BLACK);
 
         Paint levelText = newPaint(Color.WHITE);
         levelText.setTextSize(convert854(50));
-        canvas.drawText("level", MARGIN, MARGIN+convert854(40), levelText);
+        canvas.drawText("level", convert854(MARGIN), convert854(MARGIN+40), levelText);
         levelText.setTextSize(convert854(35));
-        canvas.drawText(level+"", MARGIN, MARGIN+convert854(90), levelText);
+        canvas.drawText(level+"", convert854(MARGIN), convert854(MARGIN+90), levelText);
     }
 
     private void drawScore() {
@@ -516,9 +518,9 @@ public class MainActivity extends AppCompatActivity {
         Paint scoreText = newPaint(Color.WHITE);
         scoreText.setTextSize(convert854(50));
         scoreText.setTextAlign(Paint.Align.RIGHT);
-        canvas.drawText("score", w()-MARGIN, MARGIN+convert854(40), scoreText);
+        canvas.drawText("score", w()-convert854(MARGIN), convert854(MARGIN+40), scoreText);
         scoreText.setTextSize(convert854(35));
-        canvas.drawText(score+"", w()-MARGIN, MARGIN+convert854(90), scoreText);
+        canvas.drawText(score+"", w()-convert854(MARGIN), convert854(MARGIN+90), scoreText);
     }
 
     //draws the pyramid of triangles
@@ -526,19 +528,19 @@ public class MainActivity extends AppCompatActivity {
         for (int r = 0; r < ROWS; r++)
             for (int c = 0; c < r * 2 + 1; c++)
                 pyramid[r][c].draw(canvas, (float) (w() / 2 + (r - c) * width / Math.sqrt(3)),
-                        MARGIN + width / 2 + r * width, width / 2, 1 - c % 2);
+                        convert854(MARGIN) + width / 2 + r * width, width / 2, 1 - c % 2);
     }
 
     //draws the pyramid's "reflection" under it
     private void drawReflection() {
         for (int c = 0; c < ROWS * 2 - 1; c++) {
             pyramid[ROWS - 1][c].drawBase(canvas, (float)(w()/2+(ROWS-1-c)*width/Math.sqrt(3)),
-                    MARGIN + width/2 + ROWS*width, width / 2, c % 2);
+                    convert854(MARGIN) + width/2 + ROWS*width, width / 2, c % 2);
         }
         Paint p = new Paint();
-        p.setShader(new LinearGradient(0, MARGIN + width*ROWS, 0, MARGIN + width*(ROWS+1),
+        p.setShader(new LinearGradient(0, convert854(MARGIN) + width*ROWS, 0, convert854(MARGIN) + width*(ROWS+1),
                 Color.argb(130,0,0,0), Color.BLACK, Shader.TileMode.CLAMP));
-        canvas.drawRect(0, MARGIN + width * ROWS, w(), MARGIN + width * (ROWS + 1) + 2, p);
+        canvas.drawRect(0, convert854(MARGIN) + width * ROWS, w(), convert854(MARGIN) + width * (ROWS + 1) + 2, p);
     }
 
     //draws the pentagon of colors at the bottom
@@ -603,7 +605,7 @@ public class MainActivity extends AppCompatActivity {
             canvas.drawText(instructions[i], w()/2, convert854(200)+convert854(50)*i, p);
         }
 
-        drawHelpButton(w()-convert854(40),h()-convert854(40),30, false);
+        drawHelpButton(w()-convert854(40),h()-convert854(40),convert854(30), false);
     }
 
     private void flip(int color) {
