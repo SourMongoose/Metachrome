@@ -5,6 +5,7 @@ package com.chrisx.metachrome;
  * @TODO everything
  */
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -20,7 +21,6 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.Window;
@@ -33,7 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     private Bitmap bmp;
     private Canvas canvas;
     private LinearLayout ll;
